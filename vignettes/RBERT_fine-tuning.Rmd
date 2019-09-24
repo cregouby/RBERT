@@ -1,0 +1,248 @@
+---
+title: "Fine-tuning with RBERT"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Fine-tuning with RBERT}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+ 
+ <!-- Copyright 2019 Bedford Freeman & Worth Pub Grp LLC DBA Macmillan Learning.  -->
+
+ <!-- Licensed under the Apache License, Version 2.0 (the "License"); -->
+ <!-- you may not use this file except in compliance with the License. -->
+ <!-- You may obtain a copy of the License at -->
+
+ <!--     http://www.apache.org/licenses/LICENSE-2.0 -->
+
+ <!-- Unless required by applicable law or agreed to in writing, software -->
+ <!-- distributed under the License is distributed on an "AS IS" BASIS, -->
+ <!-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. -->
+ <!-- See the License for the specific language governing permissions and -->
+ <!-- limitations under the License. -->
+ 
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+# Fine-tuning
+
+Using RBERT for fine-tuning is not yet recommended. This vignette is for testing.
+
+```{r, eval=FALSE}
+library(RBERT)
+library(dplyr)
+# setup paths and things
+# download checkpoint, etc.
+
+temp_dir <- tempdir()
+# Download pre-trained BERT model.
+RBERT::download_BERT_checkpoint(model = "bert_base_uncased",
+                                destination = temp_dir)
+
+# path to downloaded BERT checkpoint
+BERT_PRETRAINED_DIR <- file.path(temp_dir,
+                                 "BERT_checkpoints", 
+                                 "uncased_L-12_H-768_A-12")
+TRAIN_BATCH_SIZE <- 32L # 32L
+EVAL_BATCH_SIZE <- 8L
+LEARNING_RATE <- 2e-5
+NUM_TRAIN_EPOCHS <- 1L #3.0
+WARMUP_PROPORTION <- 0.1
+MAX_SEQ_LENGTH <- 128L
+# Model configs
+SAVE_CHECKPOINTS_STEPS <- 1000L # 1000L
+ITERATIONS_PER_LOOP <- 1000L #1000L
+NUM_TPU_CORES <- 8L  # don't really need this on cpu
+VOCAB_FILE <- file.path(BERT_PRETRAINED_DIR, 'vocab.txt')
+CONFIG_FILE <- file.path(BERT_PRETRAINED_DIR, 'bert_config.json')
+INIT_CHECKPOINT <- file.path(BERT_PRETRAINED_DIR, 'bert_model.ckpt')
+DO_LOWER_CASE <- grepl('/uncased', BERT_PRETRAINED_DIR)
+# figure out the best way to do the output directories
+OUTPUT_DIR <- normalizePath(file.path("~",
+                        "BERT_tests", "SA"))
+TASK_DATA_DIR <- file.path(OUTPUT_DIR, "SA_data")
+
+```
+
+
+Create the config ... object.
+
+```{r, eval=FALSE}
+
+run_config <- tensorflow::tf$contrib$tpu$RunConfig(
+  # cluster=tpu_cluster_resolver,
+  model_dir = OUTPUT_DIR,
+  save_checkpoints_steps = SAVE_CHECKPOINTS_STEPS,
+  tpu_config = tensorflow::tf$contrib$tpu$TPUConfig(
+    iterations_per_loop = ITERATIONS_PER_LOOP,
+    num_shards = NUM_TPU_CORES,
+    per_host_input_for_training = tensorflow::tf$contrib$tpu$InputPipelineConfig$PER_HOST_V2)
+)
+
+
+```
+
+Helper functions for getting training data go here (find better home for these).
+
+```{r, eval=FALSE}
+
+# the functions below implement the basic functionality of the DataProcessor
+# class. 
+
+# vectorized version of convert_to_unicode (should not be defined here; find
+# better home).
+
+convert_to_unicode_vec <- function(text) {
+  purrr::map_chr(text, RBERT:::convert_to_unicode)
+}
+
+# get training data...
+# hmm, maybe restructure this to read in all data from single file, then do
+# test/train split later?
+# in any case, probably make generic functions to work with standard example
+# format (<label> <text>?).
+
+
+get_labeled_data <- function(data_dir, filename = "data.csv") {
+  df <- readr::read_csv(file = file.path(data_dir, filename),
+                        skip = 1, # make parameter?
+                        col_types = "cc",
+                        col_names = c("label", "text") 
+                        )
+  return(df)
+}
+
+get_train_test_examples <- function(data_dir, 
+                                    filename = "data.csv", 
+                                    train_prop = 0.7,
+                                    seed = 23) {
+  labeled_data <- get_labeled_data(data_dir, filename) %>% 
+    dplyr::mutate(guid = paste0("train-", dplyr::row_number()),
+                  text = convert_to_unicode_vec(text),
+                  label = convert_to_unicode_vec(label))
+
+  set.seed(seed)
+
+  train_test <- rsample::initial_split(labeled_data, 
+                                       prop = train_prop, 
+                                       strata = "label")
+  
+  training_set <- rsample::training(train_test)
+  testing_set <- rsample::testing(train_test)
+  
+  training_examples <- purrr::pmap(.l = list("guid" = training_set$guid,
+                                             "text_a" = training_set$text,
+                                             "label" = training_set$label),
+                                   .f = RBERT::InputExample)
+  
+  testing_examples <- purrr::pmap(.l = list("guid" = testing_set$guid,
+                                            "text_a" = testing_set$text,
+                                            "label" = testing_set$label),
+                                  .f = RBERT::InputExample)
+  # also get all unique labels in the dataset 
+  label_list <- sort(unique(labeled_data$label))
+
+  return(list("train" = training_examples,
+              "test" = testing_examples,
+              "labels" = label_list))
+}
+
+
+```
+
+Load training data...
+
+```{r, eval=FALSE}
+
+# label_list = processor.get_labels() # eventually implement something like this
+# label_list <- c("0", "1") # for CoLA
+
+# change this to my data.
+# train_examples <- get_CoLA_train_examples(TASK_DATA_DIR)
+train_test_examples <- get_train_test_examples(TASK_DATA_DIR, 
+                                               seed = 23)
+train_examples <- train_test_examples$train
+test_examples <- train_test_examples$test
+
+
+# label_list <- c("0", "1", "2") 
+# do this automatically. If some labels might be missing from data, can manually
+# override.
+label_list <- train_test_examples$labels
+
+
+```
+
+Now do the stuff
+
+
+```{r, eval=FALSE}
+tokenizer <- RBERT::FullTokenizer(vocab_file = VOCAB_FILE,
+                                  do_lower_case = DO_LOWER_CASE)
+
+num_train_steps <- as.integer( ( length(train_examples) / TRAIN_BATCH_SIZE) *
+                                 NUM_TRAIN_EPOCHS )
+num_warmup_steps <- as.integer(num_train_steps * WARMUP_PROPORTION)
+
+model_fn <- RBERT::model_fn_builder(
+  bert_config = RBERT::bert_config_from_json_file(CONFIG_FILE),
+  num_labels = length(label_list),
+  init_checkpoint = INIT_CHECKPOINT,
+  learning_rate = LEARNING_RATE,
+  num_train_steps = num_train_steps,
+  num_warmup_steps = num_warmup_steps,
+  use_tpu = FALSE,
+  use_one_hot_embeddings = TRUE
+)
+
+
+# need to wrap `model_fn` in `py_func` so that it behaves like a good
+# python function. Specifically, because in tensorflow the function will be
+# checked to make sure it takes the right arguments, using a python method for
+# functions. (?)
+estimator <- tensorflow::tf$contrib$tpu$TPUEstimator(
+  use_tpu = FALSE,
+  model_fn = reticulate::py_func(model_fn),
+  config = run_config,
+  train_batch_size = TRAIN_BATCH_SIZE,
+  eval_batch_size = EVAL_BATCH_SIZE
+)
+
+train_features <- convert_examples_to_features(train_examples,
+                                               label_list,
+                                               MAX_SEQ_LENGTH,
+                                               tokenizer)
+
+train_input_fn <-  input_fn_builder(
+  features = train_features,
+  seq_length = MAX_SEQ_LENGTH,
+  is_training = TRUE,
+  drop_remainder = TRUE)
+
+# train!
+estimator$train(input_fn = reticulate::py_func(train_input_fn),
+                max_steps = num_train_steps)
+
+# evaluate: something like this...
+eval_examples <- test_examples
+eval_features <- convert_examples_to_features(eval_examples, label_list, MAX_SEQ_LENGTH, tokenizer)
+
+eval_steps <- as.integer(length(eval_examples) / EVAL_BATCH_SIZE)
+eval_input_fn <- input_fn_builder(
+  features = eval_features,
+  seq_length = MAX_SEQ_LENGTH,
+  is_training = FALSE,
+  drop_remainder = TRUE)
+# ... but this part fails with TypeError.
+result <- estimator$evaluate(input_fn = reticulate::py_func(eval_input_fn),
+                             steps = eval_steps)
+
+```
+
