@@ -638,8 +638,21 @@ model_fn_builder <- function(bert_config,
                                                      weights = is_real_example)
         loss <- tensorflow::tf$metrics$mean(values = per_example_loss,
                                             weights = is_real_example)
-        return(list("eval_accuracy" = accuracy,
-                    "eval_loss" = loss))
+        # This seems like it should work, but doesn't:
+        # return(list("eval_accuracy" = accuracy,
+        #             "eval_loss" = loss))
+        # Gives error:
+        # TypeError: Values of eval_metric_ops must be (metric_value, update_op)
+        # tuples, given: [<tf.Tensor 'accuracy/value:0' shape=() dtype=float32>,
+        # <tf.Tensor 'accuracy/update_op:0' shape=() dtype=float32>]
+        return(
+        reticulate::dict(list("eval_accuracy" = reticulate::tuple(accuracy[[1]],
+                                                                  accuracy[[2]],
+                                                              convert = TRUE),
+                              "eval_loss" = reticulate::tuple(loss[[1]],
+                                                              loss[[2]],
+                                                              convert = TRUE)
+                              )))
       }
       # "`eval_metrics` is a tuple of `metric_fn` and `tensors`..."
       # See link in comments below. -JDB
