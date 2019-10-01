@@ -87,7 +87,6 @@ create_optimizer <- function(loss,
                                             tensorflow::tf$int32)
     warmup_steps_int <- tensorflow::tf$constant(num_warmup_steps,
                                                 dtype = tensorflow::tf$int32)
-
     global_steps_float <- tensorflow::tf$cast(global_steps_int,
                                               tensorflow::tf$float32)
     warmup_steps_float <- tensorflow::tf$cast(warmup_steps_int,

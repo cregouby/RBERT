@@ -41,19 +41,20 @@ library(dplyr)
 # setup paths and things
 # download checkpoint, etc.
 
-temp_dir <- tempdir()
+# temp_dir <- tempdir()
+temp_dir <- "~/"
 # Download pre-trained BERT model.
-RBERT::download_BERT_checkpoint(model = "bert_base_uncased",
-                                destination = temp_dir)
+# RBERT::download_BERT_checkpoint(model = "bert_base_uncased",
+#                                 destination = temp_dir)
 
 # path to downloaded BERT checkpoint
-BERT_PRETRAINED_DIR <- file.path(temp_dir,
+BERT_PRETRAINED_DIR <- normalizePath(file.path(temp_dir,
                                  "BERT_checkpoints", 
-                                 "uncased_L-12_H-768_A-12")
+                                 "uncased_L-12_H-768_A-12"))
 TRAIN_BATCH_SIZE <- 32L # 32L
 EVAL_BATCH_SIZE <- 8L
 LEARNING_RATE <- 2e-5
-NUM_TRAIN_EPOCHS <- 1L #3.0
+NUM_TRAIN_EPOCHS <- 501L #3.0
 WARMUP_PROPORTION <- 0.1
 MAX_SEQ_LENGTH <- 128L
 # Model configs
@@ -64,15 +65,18 @@ VOCAB_FILE <- file.path(BERT_PRETRAINED_DIR, 'vocab.txt')
 CONFIG_FILE <- file.path(BERT_PRETRAINED_DIR, 'bert_config.json')
 INIT_CHECKPOINT <- file.path(BERT_PRETRAINED_DIR, 'bert_model.ckpt')
 DO_LOWER_CASE <- grepl('/uncased', BERT_PRETRAINED_DIR)
-# figure out the best way to do the output directories
+# the data needs to be somewhere...
 OUTPUT_DIR <- normalizePath(file.path("~",
                         "BERT_tests", "SA"))
 TASK_DATA_DIR <- file.path(OUTPUT_DIR, "SA_data")
+# OUTPUT_DIR <- normalizePath(file.path("~",
+#                         "BERT_tests", "CoLA"))
+# TASK_DATA_DIR <- file.path(OUTPUT_DIR, "CoLA_data")
 
 ```
 
 
-Create the config ... object.
+Create the config object.
 
 ```{r, eval=FALSE}
 
@@ -167,6 +171,7 @@ Load training data...
 # change this to my data.
 # train_examples <- get_CoLA_train_examples(TASK_DATA_DIR)
 train_test_examples <- get_train_test_examples(TASK_DATA_DIR, 
+                                               filename = "data1.csv",
                                                seed = 23)
 train_examples <- train_test_examples$train
 test_examples <- train_test_examples$test
@@ -227,11 +232,19 @@ train_input_fn <-  input_fn_builder(
   drop_remainder = TRUE)
 
 # train!
+# tensorflow::tensorboard(OUTPUT_DIR)
+start_time <- Sys.time()
+print(paste("starting training:", start_time))
 estimator$train(input_fn = reticulate::py_func(train_input_fn),
                 max_steps = num_train_steps)
+stop_time <- Sys.time()
+print(paste("training done:", stop_time))
+print(difftime(stop_time, start_time, units="hours"))
+
 
 # evaluate: something like this...
 eval_examples <- test_examples
+# eval_examples <- train_examples
 eval_features <- convert_examples_to_features(eval_examples, label_list, MAX_SEQ_LENGTH, tokenizer)
 
 eval_steps <- as.integer(length(eval_examples) / EVAL_BATCH_SIZE)
@@ -240,9 +253,15 @@ eval_input_fn <- input_fn_builder(
   seq_length = MAX_SEQ_LENGTH,
   is_training = FALSE,
   drop_remainder = TRUE)
-# ... but this part fails with TypeError.
+
 result <- estimator$evaluate(input_fn = reticulate::py_func(eval_input_fn),
                              steps = eval_steps)
+
+# This seems to be working up to this point...?
+
+result_pred <- estimator$predict(input_fn = reticulate::py_func(eval_input_fn))
+# then need to iterate through with
+# result_pred$`next`(), etc. 
 
 ```
 
