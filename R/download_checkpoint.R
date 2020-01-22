@@ -59,6 +59,7 @@
 #'
 #' @source \url{https://github.com/google-research/bert}
 #' @source \url{https://github.com/allenai/scibert}
+#' @source \url{https://github.com/google-research/ALBERT}
 #'
 #' @examples
 #' \dontrun{
@@ -79,7 +80,11 @@ download_BERT_checkpoint <- function(model = c(
                                        "scibert_scivocab_uncased",
                                        "scibert_scivocab_cased",
                                        "scibert_basevocab_uncased",
-                                       "scibert_basevocab_cased"
+                                       "scibert_basevocab_cased",
+                                       "albert_v2_base",
+                                       "albert_v2_large",
+                                       "albert_v3_base",
+                                       "albert_v3_large"
                                      ),
                                      dir = NULL,
                                      url = NULL,

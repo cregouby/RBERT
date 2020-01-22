@@ -186,6 +186,7 @@ BertModel <- function(config,
                       input_ids,
                       input_mask = NULL,
                       token_type_ids = NULL,
+                      use_one_hot_embeddings=FALSE,
                       scope = NULL) {
   if (!is_training) {
     config$hidden_dropout_prob <- 0.0
@@ -218,7 +219,8 @@ BertModel <- function(config,
         vocab_size = config$vocab_size,
         embedding_size = config$hidden_size,
         initializer_range = config$initializer_range,
-        word_embedding_name = "word_embeddings"
+        word_embedding_name = "word_embeddings",
+        use_one_hot_embeddings=use_one_hot_embeddings
       )
       embedding_output <- elup[[1]]
       embedding_table <- elup[[2]]
@@ -255,6 +257,7 @@ BertModel <- function(config,
         attention_mask = attention_mask,
         hidden_size = config$hidden_size,
         num_hidden_layers = config$num_hidden_layers,
+        num_hidden_groups=config.num_hidden_groups,
         num_attention_heads = config$num_attention_heads,
         intermediate_size = config$intermediate_size,
         intermediate_act_fn = get_activation(config$hidden_act),

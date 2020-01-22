@@ -1,6 +1,8 @@
 library(magrittr)
 google_base_url <- "https://storage.googleapis.com/bert_models/"
 scibert_base_url <- "https://s3-us-west-2.amazonaws.com/ai2-s2-research/scibert/tensorflow_models/"
+albert_base_url <- "https://storage.googleapis.com/albert_models/"
+tfhub_base_url  <- "https://storage.googleapis.com/tfhub-modules/google/"
 
 checkpoint_url_map <- c(
   "bert_base_uncased" = paste0(
@@ -50,6 +52,22 @@ checkpoint_url_map <- c(
   "scibert_basevocab_cased" = paste0(
     scibert_base_url,
     "scibert_basevocab_cased.tar.gz"
+  ),
+  "albert_v2_base" = paste0(
+    albert_base_url,
+    "albert_base_v2.tar.gz"
+  ),
+  "albert_v2_large" = paste0(
+    albert_base_url,
+    "albert_large_v2.tar.gz"
+  ),
+  "albert_v3_base" = paste0(
+    tfhub_base_url,
+    "albert_base/3.tar.gz"
+  ),
+  "albert_v3_large" = paste0(
+    tfhub_base_url,
+    "albert_large/3.tar.gz"
   )
 )
 
@@ -62,7 +80,7 @@ checkpoint_url_map <- tibble::enframe(
   dplyr::mutate(
     archive_type = c(
       rep("zip", 8),
-      rep("tar-gzip", 4)
+      rep("tar-gzip", 8)
     )
   )
 
@@ -74,5 +92,7 @@ usethis::use_data(
 rm(
   google_base_url,
   scibert_base_url,
-  checkpoint_url_map
+  albert_base_url,
+  checkpoint_url_map,
+  tfhub_base_url
 )

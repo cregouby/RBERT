@@ -100,7 +100,10 @@ find_ckpt <- function(ckpt_dir) {
                                  "scibert_scivocab_uncased",
                                  "scibert_scivocab_cased",
                                  "scibert_basevocab_uncased",
-                                 "scibert_basevocab_cased"
+                                 "scibert_basevocab_cased",
+                                 "albert_v2_base",
+                                 "albert_v2_large",
+                                 "albert_v3_base"
                                ),
                                ckpt_dir = NULL,
                                vocab_file = find_vocab(ckpt_dir),
