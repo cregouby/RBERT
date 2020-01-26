@@ -84,7 +84,12 @@ download_BERT_checkpoint <- function(model = c(
                                        "albert_v2_base",
                                        "albert_v2_large",
                                        "albert_v3_base",
-                                       "albert_v3_large"
+                                       "albert_v3_large",
+                                       "distilbert-base-uncased",
+                                       "distilbert-base-uncased-distilled-squad",
+                                       "distilbert-base-german-cased",
+                                       "distilbert-base-multilingual-cased",
+                                       "distilbert-base-uncased-finetuned-sst-2-english"
                                      ),
                                      dir = NULL,
                                      url = NULL,
@@ -302,7 +307,7 @@ download_BERT_checkpoint <- function(model = c(
 
 #' Get archive type of a BERT checkpoint
 #'
-#' Returns the archive type ("zip" or "tar-gzip") of the specified BERT
+# Returns the archive type ("zip" or "tar-gzip") of the specified BERT
 #' checkpoint from the Google Research collection or other repository.
 #'
 #' @inheritParams download_BERT_checkpoint
@@ -470,7 +475,16 @@ set_BERT_dir <- function(dir) {
                                          "scibert_scivocab_cased",
                                          "scibert_basevocab_uncased",
                                          "scibert_basevocab_cased"
-                                       ),
+                                         "albert_v2_base",
+                                         "albert_v2_large",
+                                         "albert_v3_base",
+                                         "albert_v3_large",
+                                         "distilbert-base-uncased",
+                                         "distilbert-base-uncased-distilled-squad",
+                                         "distilbert-base-german-cased",
+                                         "distilbert-base-multilingual-cased",
+                                         "distilbert-base-uncased-finetuned-sst-2-english"
+                                        ),
                                        dir = NULL,
                                        ckpt_dir = NULL) {
   has_checkpoint <- .has_checkpoint(
