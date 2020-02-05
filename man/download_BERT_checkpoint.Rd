@@ -7,13 +7,19 @@
 \url{https://github.com/google-research/bert}
 
 \url{https://github.com/allenai/scibert}
+
+\url{https://github.com/google-research/ALBERT}
 }
 \usage{
 download_BERT_checkpoint(
   model = c("bert_base_uncased", "bert_base_cased", "bert_large_uncased",
     "bert_large_cased", "bert_large_uncased_wwm", "bert_large_cased_wwm",
     "bert_base_multilingual_cased", "bert_base_chinese", "scibert_scivocab_uncased",
-    "scibert_scivocab_cased", "scibert_basevocab_uncased", "scibert_basevocab_cased"),
+    "scibert_scivocab_cased", "scibert_basevocab_uncased", "scibert_basevocab_cased",
+    "albert_v2_base", "albert_v2_large", "albert_v3_base", "albert_v3_large",
+    "distilbert-base-uncased", "distilbert-base-uncased-distilled-squad",
+    "distilbert-base-german-cased", "distilbert-base-multilingual-cased",     
+    "distilbert-base-uncased-finetuned-sst-2-english"),
   dir = NULL,
   url = NULL,
   force = FALSE,

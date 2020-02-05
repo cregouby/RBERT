@@ -10,6 +10,7 @@ BertModel(
   input_ids,
   input_mask = NULL,
   token_type_ids = NULL,
+  use_one_hot_embeddings = FALSE,
   scope = NULL
 )
 }

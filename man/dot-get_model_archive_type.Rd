@@ -13,7 +13,6 @@
 The archive type to the specified BERT model.
 }
 \description{
-Returns the archive type ("zip" or "tar-gzip") of the specified BERT
 checkpoint from the Google Research collection or other repository.
 }
 \keyword{internal}
